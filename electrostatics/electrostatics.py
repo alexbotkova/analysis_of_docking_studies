@@ -7,7 +7,8 @@ Author: Alexandra Botková
 """
 
 import pandas as pd
-from pI_aa_table import pI_table
+from Bio.Data import IUPACData
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
 def parse_predictions(predictions_filepath):
     """
@@ -54,26 +55,7 @@ def parse_residues(residues_filepath):
 
     return location_aa_dict
 
-
-def get_aa_charge(aa, pH):
-    """
-    Calculate the charge of an amino acid based on its isoelectric point (pI) and the given pH.
-
-    :param aa: Three-letter amino acid abbreviation.
-    :param pH: Environmental pH value.
-    :return: The charge of the amino acid (1 for positive, 0 for neutral, -1 for negative).
-    """
-
-    pI = pI_table.get(aa)
-
-    if pH < pI:
-        return 1  # Positive charge below pI
-    elif pH > pI:
-        return -1  # Negative charge above pI
-    else:
-        return 0  # Neutral charge at pI
-
-def get_pocket_charge(pocket_locations_dict, location_aa_dict, pH = 7):
+def get_charge_free_aa(pocket_locations_dict, location_aa_dict, pH = 7):
     """
     Calculates the charge of each protein pocket based on the predicted amino acids and environmental pH.
 
@@ -82,30 +64,54 @@ def get_pocket_charge(pocket_locations_dict, location_aa_dict, pH = 7):
     :param pH: Environmental pH value (default is 7).
     :return: Dictionary where keys are pocket IDs and values are the charge of the respective pockets.
     """
-
     pocket_charge_dict = {}
-
+    
     for pocket in pocket_locations_dict:
         pocket_charge_dict[pocket] = 0
-
         locations = pocket_locations_dict[pocket]
         for location in locations:
-            aa = location_aa_dict[location] 
-            if aa:
-                pocket_charge_dict[pocket] += get_aa_charge(aa, pH)
+            aa_3_letter = location_aa_dict[location]
+            if aa_3_letter:
+                aa_1_letter = IUPACData.protein_letters_3to1.get(aa_3_letter.capitalize(), "Unknown")
+                charge = ProteinAnalysis(aa_1_letter).charge_at_pH(pH)
+                #tprint(charge)
+                pocket_charge_dict[pocket] += charge
             # TODO else 
             else:
-                print("Unknown aa: ", aa)
-
+                print("Unknown aa: ", aa_3_letter)
+    
     return pocket_charge_dict
+
+# tohle je tady spíš ze srandy
+def get_charge_peptide(pocket_locations_dict, location_aa_dict, pH = 7):
+    pocket_charge_dict = {}
+    
+    for pocket in pocket_locations_dict:
+        pocket_charge_dict[pocket] = 0
+        locations = pocket_locations_dict[pocket]
+
+        peptide = ""
+        for location in locations:
+            aa_3_letter = location_aa_dict[location]
+            if aa_3_letter:
+                aa_1_letter = IUPACData.protein_letters_3to1.get(aa_3_letter.capitalize(), "Unknown")
+                peptide += aa_1_letter
+            # TODO else 
+            else:
+                print("Unknown aa: ", aa_3_letter)
+            
+            pocket_charge_dict[pocket] += ProteinAnalysis(peptide).charge_at_pH(pH)
+    
+    return pocket_charge_dict
+
 
 if __name__ == "__main__":
     pocket_locations_dict = parse_predictions("electrostatics/structure.pdb_predictions.csv")
     locations_aa_dict = parse_residues("electrostatics/structure.pdb_residues.csv")
-    pocket_charge_dict = get_pocket_charge(pocket_locations_dict, locations_aa_dict)
-    pocket_charge_dict = get_pocket_charge(pocket_locations_dict, locations_aa_dict, 0)
-    pocket_charge_dict = get_pocket_charge(pocket_locations_dict, locations_aa_dict, 15)
+    print()
+    pocket_charge_dict = get_charge_free_aa(pocket_locations_dict, locations_aa_dict)
     print(pocket_charge_dict)
-
-
-
+    print()
+    pocket_charge_dict2 = get_charge_peptide(pocket_locations_dict, locations_aa_dict)
+    print(pocket_charge_dict2)
+    print()
