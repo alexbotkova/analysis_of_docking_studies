@@ -13,39 +13,10 @@ import pandas as pd
 import pymol
 from pymol import cmd
 
-def get_pocket_data_df(predictions_filepath):
-    """
-    Parses a CSV file containing PDB predictions to generate an according dataframe.
-
-    :param predictions_filepath: Path to the CSV file containing PDB predictions.
-    :return: Dataframe from the given CSV file.
-    """
-    pocket_data_df = pd.read_csv(predictions_filepath)
-    pocket_data_df.columns = pocket_data_df.columns.str.strip()
-    return pocket_data_df
-
-
-def get_pocket_residues_dict(pocket_data_df):
-    """
-    Generates a dictionary where keys are pocket names and values are residues joined in one string 
-    formatted for the pymol selection command.
-
-    :param pocket_data_df: A dataframe generated from a CSV file containing PDB predictions.
-    :return: A dictionary where keys are pocket names and values are residues joined in one string 
-    formatted for the pymol selection command.
-    """
-    pocket_residues_dict = {}
-    for _, row in pocket_data_df.iterrows():
-            pocket_name = row['name'].strip()
-            residue_ids = row['residue_ids']
-            matches = re.findall(r'([A-Z])_(\d+)', residue_ids)
-            if matches:
-                chain_letter = matches[0][0] 
-                residues = [residue for _, residue in matches]
-                joined_residues = "+".join(residues)
-            residues_selection = f"resi {joined_residues} and chain {chain_letter}"
-            pocket_residues_dict[pocket_name] = residues_selection
-    return pocket_residues_dict
+import sys
+sys.path.append("..")
+from my_tools.my_parser import *
+from my_tools.pymol_tools import *
 
 def get_models_avg_coordinates(out_vina_filepath):
     """
@@ -123,6 +94,7 @@ def count_hydrogen_bonds(structure_filepath, out_vina_filepath, ligand_filepath,
         pocket_name = model_pocket[model_order]
         
         cmd.select(pocket_name, pocket_residues_dict[pocket_name])
+        #print(pocket_residues_dict[pocket_name])
         cmd.frame(state)
 
         cmd.select("h_bonds", "pocket within 3.5 of out_vina")
@@ -134,12 +106,12 @@ def count_hydrogen_bonds(structure_filepath, out_vina_filepath, ligand_filepath,
     cmd.quit()
 
 if __name__=="__main__":
-    predictions_filepath = "/Users/alexbotkova/analysis_of_docking_studies/electrostatics/structure.pdb_predictions.csv"
+    predictions_filepath = "test_files/prankweb-2SRC/structure.pdb_predictions.csv"
     out_vina_filepath = "hydrogen_bonds/out_vina.pdbqt"
     structure_filepath = "hydrogen_bonds/structure.pdbqt"
     ligand_filepath = "hydrogen_bonds/ligand.pdbqt"
 
-    pocket_data_df = get_pocket_data_df(predictions_filepath)
+    pocket_data_df = get_df(predictions_filepath)
     pocket_residues_dict = get_pocket_residues_dict(pocket_data_df)
     models_avg_coordinates = get_models_avg_coordinates(out_vina_filepath)
     model_pocket = get_model_pocket(pocket_data_df, models_avg_coordinates)
