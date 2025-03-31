@@ -9,7 +9,6 @@ Author: Alexandra Botková
 
 import re
 import numpy as np
-import pandas as pd
 import pymol
 from pymol import cmd
 
@@ -106,10 +105,10 @@ def count_hydrogen_bonds(structure_filepath, out_vina_filepath, ligand_filepath,
     cmd.quit()
 
 if __name__=="__main__":
-    predictions_filepath = "test_files/prankweb-2SRC/structure.pdb_predictions.csv"
-    out_vina_filepath = "hydrogen_bonds/out_vina.pdbqt"
-    structure_filepath = "hydrogen_bonds/structure.pdbqt"
-    ligand_filepath = "hydrogen_bonds/ligand.pdbqt"
+    predictions_filepath = "test_files/cyclohexane/prankweb-2SRC/structure.pdb_predictions.csv"
+    out_vina_filepath = "test_files/cyclohexane/result-2024-12-10T22_19_39.203Z/out_vina.pdbqt"
+    structure_filepath = "test_files/cyclohexane/result-2024-12-10T22_19_39.203Z/structure.pdbqt"
+    ligand_filepath = "test_files/cyclohexane/result-2024-12-10T22_19_39.203Z/ligand.pdbqt"
 
     pocket_data_df = get_df(predictions_filepath)
     pocket_residues_dict = get_pocket_residues_dict(pocket_data_df)
