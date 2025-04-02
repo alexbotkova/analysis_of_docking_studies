@@ -1,0 +1,52 @@
+[INFO] Console - predicting pockets for proteins from dataset [structure.cif]
+[INFO] PredictPocketsRoutine - outdir: /data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-output
+[INFO] Model - Loading model from directory (v3 format): /opt/p2rank/models/conservation_hmm
+[INFO] FeatureSetup - enabledFeatures: [chem, volsite, protrusion, bfactor, conservation, atom_table]
+[INFO] Dataset - processing dataset [structure.cif] using 1 thread
+[INFO] Dataset - 
+------------------------------------------------------------------------------------------------------------------------
+processing [structure.cif] (1/1)
+------------------------------------------------------------------------------------------------------------------------
+
+[INFO] Console - processing [structure.cif] (1/1)
+[INFO] Protein - loading protein [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-input/structure.cif]
+[INFO] PdbUtils - loading file [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-input/structure.cif]
+[INFO] Struct - all groups in chain A: 450
+[INFO] Struct - all groups in chain A: 450
+[INFO] Struct - 450 groups in chain A
+[INFO] Protein - structure atoms: 3915
+[INFO] Protein - protein   atoms: 3529
+[INFO] Protein - ignoring ligands
+[INFO] FeatureSetup - enabledFeatures: [chem, volsite, protrusion, bfactor, conservation, atom_table]
+[INFO] Protein - SAS points: 6785
+[INFO] Protein - exposed protein atoms: 2378 of 3529
+[INFO] Protein - Loading conservation scores for [structure.cif]
+[INFO] ConservationLoader - Conservation lookup dirs: [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-input]
+[INFO] ConservationLoader - Looking for conservation in dirs [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-input]
+[INFO] ConservationLoader - Conservation file for [baseName:structure chain:A] found: [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-input/structureA.hom]
+[INFO] ConservationScore - Loading conservation scores from file [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-input/structureA.hom]
+[INFO] ConservationScore - Matching pdb chain A (n=450) with score chain (n=450)
+[INFO] ConservationScore - chain A in structure: TTFVALYDYESRTETDLSFKKGERLQIVNNTEGDWWLAHSLSTGQTGYIPSNYVAPSDSIQAEEWYFGKITRRESERLLLNAENPRGTFLVRESETTKGAYCLSVSDFDNAKGLNVKHYKIRKLDSGGFYITSRTQFNSLQQLVAYYSKHADGLCHRLTTVCPTSKPQTQGLAKDAWEIPRESLRLEVKLGQGCFGEVWMGTWNGTTRVAIKTLKPGTMSPEAFLQEAQVMKKLRHEKLVQLYAVVSEEPIYIVTEYMSKGSLLDFLKGETGKYLRLPQLVDMAAQIASGMAYVERMNYVHRDLRAANILVGENLVCKVADFGLARLIEDNEYTARQGAKFPIKWTAPEAALYGRFTIKSDVWSFGILLTELTTKGRVPYPGMVNREVLDQVERGYRMPCPPECPESLHDLMCQCWRKEPEERPTFEYLQAFLEDYFTSTEPQ?QPGENL
+[INFO] ConservationScore - chain A in scoreFile: TTFVALYDYESRTETDLSFKKGERLQIVNNTEGDWWLAHSLSTGQTGYIPSNYVAPSDSIQAEEWYFGKITRRESERLLLNAENPRGTFLVRESETTKGAYCLSVSDFDNAKGLNVKHYKIRKLDSGGFYITSRTQFNSLQQLVAYYSKHADGLCHRLTTVCPTSKPQTQGLAKDAWEIPRESLRLEVKLGQGCFGEVWMGTWNGTTRVAIKTLKPGTMSPEAFLQEAQVMKKLRHEKLVQLYAVVSEEPIYIVTEYMSKGSLLDFLKGETGKYLRLPQLVDMAAQIASGMAYVERMNYVHRDLRAANILVGENLVCKVADFGLARLIEDNEYTARQGAKFPIKWTAPEAALYGRFTIKSDVWSFGILLTELTTKGRVPYPGMVNREVLDQVERGYRMPCPPECPESLHDLMCQCWRKEPEERPTFEYLQAFLEDYFTSTEPQXQPGENL
+[INFO] ConservationScore - masked chain A in structure: TTFVALYDYESRTETDLSFKKGERLQIVNNTEGDWWLAHSLSTGQTGYIPSNYVAPSDSIQAEEWYFGKITRRESERLLLNAENPRGTFLVRESETTKGAYCLSVSDFDNAKGLNVKHYKIRKLDSGGFYITSRTQFNSLQQLVAYYSKHADGLCHRLTTVCPTSKPQTQGLAKDAWEIPRESLRLEVKLGQGCFGEVWMGTWNGTTRVAIKTLKPGTMSPEAFLQEAQVMKKLRHEKLVQLYAVVSEEPIYIVTEYMSKGSLLDFLKGETGKYLRLPQLVDMAAQIASGMAYVERMNYVHRDLRAANILVGENLVCKVADFGLARLIEDNEYTARQGAKFPIKWTAPEAALYGRFTIKSDVWSFGILLTELTTKGRVPYPGMVNREVLDQVERGYRMPCPPECPESLHDLMCQCWRKEPEERPTFEYLQAFLEDYFTSTEPQXQPGENL
+[INFO] ConservationScore - masked chain A in scoreFile: TTFVALYDYESRTETDLSFKKGERLQIVNNTEGDWWLAHSLSTGQTGYIPSNYVAPSDSIQAEEWYFGKITRRESERLLLNAENPRGTFLVRESETTKGAYCLSVSDFDNAKGLNVKHYKIRKLDSGGFYITSRTQFNSLQQLVAYYSKHADGLCHRLTTVCPTSKPQTQGLAKDAWEIPRESLRLEVKLGQGCFGEVWMGTWNGTTRVAIKTLKPGTMSPEAFLQEAQVMKKLRHEKLVQLYAVVSEEPIYIVTEYMSKGSLLDFLKGETGKYLRLPQLVDMAAQIASGMAYVERMNYVHRDLRAANILVGENLVCKVADFGLARLIEDNEYTARQGAKFPIKWTAPEAALYGRFTIKSDVWSFGILLTELTTKGRVPYPGMVNREVLDQVERGYRMPCPPECPESLHDLMCQCWRKEPEERPTFEYLQAFLEDYFTSTEPQXQPGENL
+[INFO] ConservationScore - Exact score sequence match
+[INFO] SLinkClusterer - clustering [158] elements
+[INFO] SLinkClusterer - clusters: [id:7( 4 ), id:8( 1 ), id:9( 1 ), id:38( 5 ), id:87( 6 ), id:89( 2 ), id:102( 125 ), id:116( 2 ), id:150( 2 ), id:153( 5 ), id:155( 3 ), id:157( 2 )]
+[INFO] SLinkClusterer - clusters together: 158 / 158
+[INFO] PocketPredictor - PREDICTING POCKETS.... ====================================
+[INFO] PocketPredictor - SAS POINTS: 6785
+[INFO] PocketPredictor - LIGANDABLE POINTS: 158
+[INFO] PocketPredictor - CLUSTERS: 12
+[INFO] PocketPredictor - FILTERED CLUSTERS: 6
+[INFO] PocketPredictor - pocket 1 -  surf_atoms:  86   points: 125   score:   53.4
+[INFO] PocketPredictor - pocket 2 -  surf_atoms:  28   points:   5   score:    2.1
+[INFO] PocketPredictor - pocket 3 -  surf_atoms:  14   points:   6   score:    1.8
+[INFO] PocketPredictor - pocket 4 -  surf_atoms:  20   points:   4   score:    1.6
+[INFO] PocketPredictor - pocket 5 -  surf_atoms:  12   points:   5   score:    1.6
+[INFO] PocketPredictor - pocket 6 -  surf_atoms:  15   points:   3   score:    1.0
+[INFO] PredictionVisualizer - copying [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-input/structure.cif] to [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-output/visualizations/data/structure.cif]
+[INFO] Console - predicting pockets finished in 0 hours 0 minutes 3.038 seconds
+[INFO] Console - results saved to directory [/data/prankweb/predictions/v4-conservation-hmm/SR/2SRC/working/p2rank-output]
+[INFO] Console - 
+[INFO] Console - Finished successfully in 0 hours 0 minutes 4.039 seconds.
