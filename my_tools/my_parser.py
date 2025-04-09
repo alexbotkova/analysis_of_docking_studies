@@ -1,13 +1,22 @@
+"""
+Parses prediction and residue data from CSV files for use in pocket and interaction analysis.
+
+Functions:
+    get_df: Reads a CSV file and returns a cleaned pandas DataFrame.
+    parse_predictions: Converts a prediction CSV to a pocket-to-residues dictionary.
+    parse_residues: Converts a residue CSV to a residue-location-to-amino-acid dictionary.
+"""
+
 import pandas as pd
 
-def get_df(filepath):
+def get_df(predictions_filepath):
     """
     Parses a CSV file containing PDB predictions to generate an according dataframe.
 
     :param predictions_filepath: Path to the CSV file containing PDB predictions.
     :return: Dataframe from the given CSV file.
     """
-    df = pd.read_csv(filepath)
+    df = pd.read_csv(predictions_filepath)
     df.columns = df.columns.str.strip()
     return df
 
