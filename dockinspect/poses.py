@@ -12,14 +12,12 @@ Classes:
 
 import pymol
 from pymol import cmd
-from my_tools.my_parser import *
+from my_parser import *
 from pockets import Pockets
 from ligand import Ligand
 import re
 import numpy as np
-import sys
-sys.path.append("..")
-from my_tools.my_parser import *
+from my_parser import *
 
 class Poses:
     """
@@ -34,27 +32,42 @@ class Poses:
     """
 
     @staticmethod
-    def get_hydrogen_bonds(structure_filepath, out_vina_filepath):
+    def get_hydrogen_bonds(pdb_code, out_vina_filepath):
         """
-        Calculates the number of hydrogen bonds between protein and ligand for each pose.
+        Calculates the number of hydrogen bonds between protein and ligand for each pose,
+        filtering out intra-ligand bonds.
 
-        :param structure_filepath: Path to the structure PDBQT file.
+        :param pdb_code: PDB code for the structure to fetch from RCSB.
         :param out_vina_filepath: Path to the Vina docking output file (PDBQT).
         :return: A list of hydrogen bond pairs (tuples of atom indices) for each pose.
         """
+        import pymol
+        from pymol import cmd
+
         pymol.finish_launching(['pymol', '-qc'])
 
-        cmd.load(structure_filepath, "structure")  
-        cmd.load(out_vina_filepath, "out_vina")    
+        cmd.fetch(pdb_code, name="structure", type="pdb")
+        cmd.load(out_vina_filepath, "out_vina")
         cmd.h_add()
 
         model_hbonds = []
-        for state in range(1, cmd.count_states("out_vina") + 1):
-            cmd.frame(state)
-            sel1 = 'structure and (donor or acceptor)'
-            sel2 = 'out_vina and (donor or acceptor)'
-            hbonds = cmd.find_pairs(sel1, sel2, mode=1, cutoff=3.5, angle=55.0)
-            model_hbonds.append(hbonds)
+        n_states = cmd.count_states("out_vina")
+
+        for state in range(1, n_states + 1):
+            structure_donors    = "structure and (elem N+O) and donor"
+            structure_acceptors = "structure and (elem N+O) and acceptor"
+            ligand_donors       = "out_vina and (elem N+O) and donor"
+            ligand_acceptors    = "out_vina and (elem N+O) and acceptor"
+
+            hbonds1 = cmd.find_pairs(structure_donors, ligand_acceptors,
+                                    mode=1, cutoff=3.2, angle=25.0, state1=1, state2=state)
+
+            hbonds2 = cmd.find_pairs(ligand_donors, structure_acceptors,
+                                    mode=1, cutoff=3.2, angle=25.0, state1=state, state2=1)
+
+            all_hbonds = hbonds1 + hbonds2
+
+            model_hbonds.append(all_hbonds)
 
         cmd.quit()
         return model_hbonds
@@ -125,7 +138,7 @@ class Poses:
         models_avg_coordinates = Poses.get_models_avg_coordinates(out_vina_filepath)
         return Poses.get_model_pocket_helper(pocket_data_df, models_avg_coordinates)
 
-    def __init__(self, ligand, pockets, structure_filepath, out_vina_filepath, predictions_filepath):
+    def __init__(self, ligand, pockets, pdb_code, out_vina_filepath, predictions_filepath):
         """
         Initializes a Poses object by associating each ligand pose with a pocket and computing HBonds.
 
@@ -138,7 +151,7 @@ class Poses:
         self.ligand = ligand
         self.pockets = pockets
 
-        self.model_hbonds = Poses.get_hydrogen_bonds(structure_filepath, out_vina_filepath)
+        self.model_hbonds = Poses.get_hydrogen_bonds(pdb_code, out_vina_filepath)
         self.model_pockets = Poses.get_model_pocket(predictions_filepath, out_vina_filepath)
         self.number_of_models = len(self.model_pockets)
 

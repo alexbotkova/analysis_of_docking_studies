@@ -1,0 +1,7 @@
+Date: Sun 13 Apr 2025 16:35:20 
+Ligand: C[C@@H]1CCN([C@H](C1)C(=O)O)C(=O)[C@H](CCCN=C(N)N)NS(=O)(=O)C2=CC=CC3=C2NCC(C3)C
+Method: Vina
+Target: structure.pdbqt
+Sampling exhaustivity: 4
+Box size: 20 20 20
+Box center: 17.272 20.476 58.98

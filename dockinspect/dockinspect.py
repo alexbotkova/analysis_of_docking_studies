@@ -22,13 +22,16 @@ Run via CLI:
 import click
 import cmd as shell_cmd
 import shlex
-import subprocess
-from ligand import Ligand
-from visualization import *
-from typing import Optional
 import os
-from pockets import Pockets  
+import subprocess
+
+
+from ligand import Ligand
+from pockets import Pockets
 from poses import Poses
+from visualization import *
+from my_parser import *
+from typing import Optional
 
 class Session:
     """
@@ -36,53 +39,59 @@ class Session:
 
     :param smiles: SMILES string for the ligand.
     :param vina_file: Path to the out_vina file from AutoDock Vina.
-    :param structure_file: Path to the protein structure file.
+    :param pdb_code: Protein structure PDB code.
     :param predictions_file: Path to the file containing predicted pockets from p2rank (optional).
     :param residues_file: Path to the file mapping pockets to residues from p2rank (optional).
     """
-    def __init__(self, smiles=None, vina_file=None, structure_file=None, predictions_file=None, residues_file=None):
+    def __init__(self, smiles=None, vina_file=None, pdb_code=None, structure_file=None, predictions_file=None, residues_file=None):
         self.ligand = Ligand(smiles) if smiles else None
         self.out_vina_file = vina_file
+        self.pdb_code = pdb_code
         self.structure_file = structure_file
         self.predictions_file = predictions_file
         self.residues_file = residues_file
         self.pockets = None
-        self.poses = None  
+        self.poses = None 
 
-def launch_pymol_visualization(structure_file: str, vina_file: str, pose_num: int = 1, mode: Optional[str] = "", pocket_selection: Optional[str] = ""):
+def launch_pymol_visualization(pdb_code: str, vina_file: str, pose_num: int = 1, mode: Optional[str] = "", pocket_selection: Optional[str] = ""):
     """
     Launches PyMOL with a visualization script for binding poses from AutoDock Vina.
 
-    :param structure_file: Path to the protein structure file.
+    :param pdb_code: PDB code for the protein structure to fetch remotely.
     :param vina_file: Path to the out_vina file from AutoDock Vina.
     :param pose_num: Pose number to visualize (1-based index, default is 1).
     :param mode: Visualization mode ('surface', 'polar', 'charge', 'hbonds', default is 'hbonds').
     :param pocket_selection: PyMOL atom selection string for highlighting a pocket (from p2rank predictions).
     :return: None
     """
-    script_path = "visualization_runtime.py"
+    script_path = os.path.join(os.path.dirname(__file__), "visualization_runtime.py")
+    project_root = os.path.abspath(os.path.dirname(__file__))
 
     with open(script_path, "w") as f:
         f.write(f"""from pymol import cmd
 import sys
-sys.path.append("..")
-from my_tools.my_parser import *
+import os
+sys.path.insert(0, {repr(project_root)})
+
+from my_parser import *
 from visualization import *
 
 visualize(
-    structure_file="{structure_file}",
-    vina_file="{vina_file}",
+    pdb_code={repr(pdb_code)},
+    vina_file={repr(vina_file)},
     pocket_selection={repr(pocket_selection)},
     pose_num={pose_num},
-    mode="{mode}"
+    mode={repr(mode)}
 )
 """)
+
     try:
-        subprocess.run(["pymol", script_path])
+        env = os.environ.copy()
+        env["PYTHONPATH"] = project_root
+        subprocess.run(["pymol", script_path], cwd=project_root, env=env, stdout=subprocess.DEVNULL)
     except Exception as e:
         print(f"Error running PyMOL: {e}")
-    finally:
-        os.remove(script_path)
+
 
 class Shell(shell_cmd.Cmd):
     """
@@ -144,12 +153,12 @@ class Shell(shell_cmd.Cmd):
                     pocket_residues_dict = get_pocket_atomids_dict(get_df(self.session.predictions_file))
                     pocket_id = model_pockets[pose_num - 1]  
                     pocket_selection = pocket_residues_dict.get(pocket_id, "")
-                    print(f"Using pocket: {pocket_id} with selection: {pocket_selection}")
+                    #print(f"Using pocket: {pocket_id} with selection: {pocket_selection}")
                 except Exception as e:
                     print(f"Warning: Could not determine pocket selection: {e}")
 
             launch_pymol_visualization(
-                structure_file=self.session.structure_file,
+                pdb_code=self.session.pdb_code,
                 vina_file=self.session.out_vina_file,
                 pose_num=pose_num,
                 mode=mode,
@@ -238,23 +247,25 @@ class Shell(shell_cmd.Cmd):
 
 @click.command()
 @click.argument("ligand_smiles", type=click.STRING)
+@click.argument("pdb_code", type=click.STRING)
 @click.argument("vina_file", type=click.Path(exists=True))
 @click.argument("structure_file", type=click.Path(exists=True))
 @click.argument("predictions_file", required=False, type=click.Path(exists=True))
 @click.argument("residues_file", required=False, type=click.Path(exists=True))
-def launch_shell(ligand_smiles, vina_file, structure_file, predictions_file, residues_file):
+def launch_shell(ligand_smiles, pdb_code, vina_file, structure_file, predictions_file, residues_file):
     """
     Initializes a docking analysis session and launches the interactive shell.
 
     :param ligand_smiles: SMILES string of the ligand.
     :param vina_file: Output file from AutoDock Vina.
-    :param structure_file: Protein structure file.
+    :param pdb_code: Protein structure PDB code.
     :param predictions_file: Pocket prediction file (optional).
     :param residues_file: Residue annotation file (optional).
     :return: None
     """
     session = Session(
         smiles=ligand_smiles,
+        pdb_code=pdb_code,
         vina_file=vina_file,
         structure_file=structure_file,
         predictions_file=predictions_file,
@@ -269,12 +280,12 @@ def launch_shell(ligand_smiles, vina_file, structure_file, predictions_file, res
     else:
         print("Pocket prediction files not provided. 'pocket_info' and 'poses_info' will be disabled.")
 
-    if session.ligand and session.pockets and vina_file and structure_file and predictions_file:
+    if session.ligand and session.pockets and vina_file and pdb_code and predictions_file:
         try:
             session.poses = Poses(
                 ligand=session.ligand,
                 pockets=session.pockets,
-                structure_filepath=structure_file,
+                pdb_code=session.pdb_code,
                 out_vina_filepath=vina_file,
                 predictions_filepath=predictions_file
             )
@@ -283,7 +294,6 @@ def launch_shell(ligand_smiles, vina_file, structure_file, predictions_file, res
 
     print("Session initialized. Starting interactive mode...\n")
     Shell(session).cmdloop()
-
 
 if __name__ == "__main__":
     launch_shell()

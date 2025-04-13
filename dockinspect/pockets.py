@@ -11,8 +11,8 @@ Classes:
 """
 
 import freesasa
-from my_tools.my_parser import *
-from my_tools.pymol_tools import *
+from my_parser import *
+from pymol_tools import *
 
 freesasa.setVerbosity(1)
 
@@ -136,6 +136,7 @@ class Pockets:
         for pid in pocket_ids:
             lines.append(self.format_pocket_row(pid))
         return "\n".join(lines)
+
 
 if __name__ == "__main__":
     """

@@ -52,7 +52,6 @@ class Ligand:
         )
 
 
-
 if __name__=="__main__":
     #smiles = "C1CCCCC1" 
     #smiles = "C1CCC(O)CC1" 
