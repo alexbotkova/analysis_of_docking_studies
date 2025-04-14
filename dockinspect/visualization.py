@@ -124,8 +124,10 @@ def visualize(pdb_code, vina_file, pose_num=1, pocket_selection = "",  mode="", 
 
         hbonds = cmd.find_pairs(sel1, sel2, mode=1,
                                 cutoff=max_distance_cutoff,
-                                angle=strict_angle_cutoff)
+                                angle=strict_angle_cutoff, 
+                                state1=1, state2=pose_num)
 
+#TODO možná se na too vykašlat
         filtered_hbonds = []
         for (m1, i1), (m2, i2) in hbonds:
             try:
@@ -138,11 +140,18 @@ def visualize(pdb_code, vina_file, pose_num=1, pocket_selection = "",  mode="", 
             if obj1 != obj2 and {"structure", "out_vina"} == {obj1, obj2} and min_distance_cutoff <= distance <= max_distance_cutoff:
                 filtered_hbonds.append(((m1, i1), (m2, i2)))
 
-        for idx, ((m1, i1), (m2, i2)) in enumerate(filtered_hbonds):
+        for idx, ((m1, i1), (m2, i2)) in enumerate(hbonds):
             cmd.distance(f"hb_{idx}", f"{m1} and index {i1}", f"{m2} and index {i2}")
             cmd.select(f"hb_res_{idx}_1", f"byres ({m1} and index {i1})")
             cmd.select(f"hb_res_{idx}_2", f"byres ({m2} and index {i2})")
             cmd.show("sticks", f"hb_res_{idx}_1 or hb_res_{idx}_2")
+
+            # Label only residues from the protein structure
+            if m1 == "structure":
+                cmd.label(f"{m1} and index {i1}", '"%s" % (resn)')
+            if m2 == "structure":
+                cmd.label(f"{m2} and index {i2}", '"%s" % (resn)')
+
 
 
     if color_mode == "broad":

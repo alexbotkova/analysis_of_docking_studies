@@ -50,24 +50,30 @@ class Poses:
         cmd.load(out_vina_filepath, "out_vina")
         cmd.h_add()
 
+        max_distance_cutoff = 3.2
+        strict_angle_cutoff = 25.0
+
         model_hbonds = []
         n_states = cmd.count_states("out_vina")
 
         for state in range(1, n_states + 1):
-            structure_donors    = "structure and (elem N+O) and donor"
-            structure_acceptors = "structure and (elem N+O) and acceptor"
-            ligand_donors       = "out_vina and (elem N+O) and donor"
-            ligand_acceptors    = "out_vina and (elem N+O) and acceptor"
-
-            hbonds1 = cmd.find_pairs(structure_donors, ligand_acceptors,
-                                    mode=1, cutoff=3.2, angle=25.0, state1=1, state2=state)
-
-            hbonds2 = cmd.find_pairs(ligand_donors, structure_acceptors,
-                                    mode=1, cutoff=3.2, angle=25.0, state1=state, state2=1)
-
-            all_hbonds = hbonds1 + hbonds2
-
-            model_hbonds.append(all_hbonds)
+            sel1 = 'structure and (donor or acceptor)'
+            sel2 = 'out_vina and (donor or acceptor)'
+            
+            hbonds = cmd.find_pairs(sel1, sel2, mode=1,
+                                cutoff=max_distance_cutoff,
+                                angle=strict_angle_cutoff,   
+                                state1=1, state2=state)
+            
+            hbonds_res = []
+            for (m1, i1), (m2, i2) in hbonds:
+                if m1 == "structure":
+                    res_info1 = cmd.get_model(f"{m1} and index {i1}").atom[0]
+                    hbonds_res.append(res_info1.resn)
+                if m2 == "structure":
+                    res_info2 = cmd.get_model(f"{m2} and index {i2}").atom[0]
+                    hbonds_res.append(res_info2.resn)
+            model_hbonds.append(hbonds_res)
 
         cmd.quit()
         return model_hbonds

@@ -14,9 +14,6 @@ Commands:
     pocket_info     - Show SASA, GRAVY, and Charge for one or all pockets
     poses_info      - Show ligand–pocket interaction summary per pose
     exit            - Exit the shell
-
-Run via CLI:
-    python script.py <SMILES> <vina_file> <structure_file> [<predictions_file> <residues_file>]
 """
 
 import click
@@ -31,6 +28,7 @@ from pockets import Pockets
 from poses import Poses
 from visualization import *
 from my_parser import *
+from export_info_to_csv import export_ligand_info, export_pocket_info, export_poses_info, export_hbond_residues
 from typing import Optional
 
 class Session:
@@ -110,12 +108,27 @@ class Shell(shell_cmd.Cmd):
         """
         Displays information about the loaded ligand.
 
-        :param line: Ignored; included for cmd compatibility.
+        Usage:
+            ligand_info [--csv FILE]
+
+        :param line: Optional argument --csv FILE to export output.
         """
-        if self.session.ligand:
-            print(self.session.ligand)
-        else:
+        if not self.session.ligand:
             print("No ligand loaded.")
+            return
+
+        tokens = shlex.split(line or "")
+        if "--csv" in tokens:
+            try:
+                csv_idx = tokens.index("--csv")
+                file_path = tokens[csv_idx + 1]
+                export_ligand_info(self.session.ligand, file_path)
+                print(f"Ligand info saved to {file_path}")
+            except Exception as e:
+                print(f"Failed to write CSV: {e}")
+        else:
+            print(self.session.ligand)
+
 
     def do_visualize(self, line):
         """
@@ -172,77 +185,142 @@ class Shell(shell_cmd.Cmd):
         Displays pocket properties: SASA, GRAVY and charge.
 
         Usage:
-            pocket_info [POCKET_ID]
+            pocket_info [POCKET_ID] [--csv FILE]
 
-        :param line: Pocket ID to show (optional). If not provided, all pockets are displayed.
+        If POCKET_ID is given, shows just that one.
+        If --csv is provided, saves all pockets to file.
         """
         if not self.session.pockets:
-            print("Pocket data not available. Provide predictions and residues files to enable this feature.")
+            print("Pocket data not available.")
             return
 
-        tokens = shlex.split(line)
+        tokens = shlex.split(line or "")
+        pid = None
+        csv_path = None
+
+        i = 0
+        while i < len(tokens):
+            if tokens[i] == "--csv":
+                if i + 1 < len(tokens):
+                    csv_path = tokens[i + 1]
+                    i += 2
+                else:
+                    print("Missing filename after --csv")
+                    return
+            else:
+                pid = tokens[i]
+                i += 1
+
         header = f"{'Pocket ID':<10} {'SASA (Å²)':>10} {'GRAVY':>10} {'Charge':>10}"
-
-        if not tokens:
-            print(self.session.pockets)
-            return
-
-        pid = tokens[0]
-        if pid not in self.session.pockets.pocket_sasas:
-            print(f"Pocket '{pid}' not found.")
-            return
-
         print(header)
         print("-" * 42)
-        print(self.session.pockets.format_pocket_row(pid))
+
+        if pid:
+            if pid not in self.session.pockets.pocket_sasas:
+                print(f"Pocket '{pid}' not found.")
+                return
+            print(self.session.pockets.format_pocket_row(pid))
+        else:
+            for pid in sorted(self.session.pockets.pocket_sasas.keys()):
+                print(self.session.pockets.format_pocket_row(pid))
+
+        if csv_path:
+            try:
+                export_pocket_info(self.session.pockets, csv_path)
+                print(f"\nAll pocket info saved to {csv_path}")
+            except Exception as e:
+                print(f"Failed to write CSV: {e}")
 
     def do_poses_info(self, line):
         """
         Displays docking pose data for all or one specific pose.
 
         Usage:
-            poses_info [POSE_INDEX]
+            poses_info [POSE_INDEX] [--csv FILE] [--res] [--csv_hbonds FILE]
 
-        :param line: Pose index to show (1-based, optional). If omitted, shows all poses.
+        If a pose index is given, only that pose is shown.
+        If --csv is given, all poses are saved to a CSV.
+        If --res is given, only residue names from H-bonds are shown.
+        If --csv_hbonds is given, hydrogen bond residues per pose are saved to a CSV.
         """
         if not self.session.poses:
             print("Poses data not available. Ensure all required inputs are loaded.")
             return
 
-        tokens = shlex.split(line)
-        header = f"{'Pose':<6} {'Pocket':<10} {'HBonds':<8} {'GRAVY/LogP':<15} {'SASA(P/L/R)':<25} {'Charge(P/L)':<15}"
+        tokens = shlex.split(line or "")
+        index = None
+        csv_path = None
+        show_res_only = False
+        csv_hbonds_path = None
 
-        if not tokens:
-            print(self.session.poses)
+        i = 0
+        csv_path = None
+        csv_hbonds_path = None
+        show_res_only = False
+
+        i = 0
+        while i < len(tokens):
+            if tokens[i] == "--csv":
+                if i + 1 < len(tokens):
+                    csv_path = tokens[i + 1]
+                    i += 2
+                else:
+                    print("Missing filename after --csv")
+                    return
+            elif tokens[i] == "--csv_hbonds":
+                if i + 1 < len(tokens):
+                    csv_hbonds_path = tokens[i + 1]
+                    i += 2
+                else:
+                    print("Missing filename after --csv_hbonds")
+                    return
+            elif tokens[i] == "--res":
+                show_res_only = True
+                i += 1
+            else:
+                try:
+                    index = int(tokens[i]) - 1
+                except ValueError:
+                    print(f"Ignoring unrecognized argument: {tokens[i]}")
+                i += 1
+
+        if show_res_only:
+            print("\nHydrogen-bonding residues per pose:\n")
+            for i, hbonds_res in enumerate(self.session.poses.model_hbonds):
+                pose_label = f"Pose {i+1:>2}"
+                if not hbonds_res:
+                    print(f"{pose_label}: — No hydrogen bonds —")
+                else:
+                    formatted_res = [res if isinstance(res, str) else f"{res[1]}-{res[0]}{res[2]}" for res in hbonds_res]
+                    print(f"{pose_label}: {', '.join(formatted_res)}")
+            print()
             return
 
-        try:
-            index = int(tokens[0]) - 1
+        header = f"{'Pose':<6} {'Pocket':<10} {'HBonds':<8} {'GRAVY/LogP':<15} {'SASA(P/L/R)':<25} {'Charge(P/L)':<15}"
+
+        if index is not None:
             if not (0 <= index < self.session.poses.number_of_models):
-                raise IndexError
+                print("Invalid pose index.")
+                return
             print(header)
             print("-" * len(header))
             print(self.session.poses.format_pose_row(index))
-        except (ValueError, IndexError):
-            print("Invalid pose index.")
+        else:
+            print(self.session.poses)
 
-    def do_exit(self, line=None):
-        """
-        Exits the interactive shell.
-
-        :param line: Unused.
-        :return: True to signal shell exit.
-        """
-        return True
-
-    def do_EOF(self, line):
-        """
-        Handles Ctrl+D to exit the shell.
-
-        :param line: Unused.
-        :return: True to signal shell exit.
-        """
-        return self.do_exit(line)
+        if csv_path:
+            try:
+                export_poses_info(self.session.poses, csv_path)
+                print(f"\nAll poses info saved to {csv_path}")
+            except Exception as e:
+                print(f"Failed to write CSV: {e}")
+        
+        if csv_hbonds_path:
+            try:
+                export_hbond_residues(self.session.poses, csv_hbonds_path)
+                print(f"\nHydrogen bond residue data saved to {csv_hbonds_path}")
+            except Exception as e:
+                print(f"Failed to write CSV: {e}")
 
 
 @click.command()
@@ -295,5 +373,142 @@ def launch_shell(ligand_smiles, pdb_code, vina_file, structure_file, predictions
     print("Session initialized. Starting interactive mode...\n")
     Shell(session).cmdloop()
 
+@click.group()
+def cli():
+    """Docking analysis tool"""
+    pass
+
+cli.add_command(launch_shell, name="shell")
+
+@cli.command(name="ligand_info")
+@click.argument("ligand_smiles", type=click.STRING)
+@click.option("--csv", type=click.Path(), help="Save output to CSV.")
+def ligand_info(ligand_smiles, csv):
+    """
+    Shows physicochemical properties of a ligand from a SMILES string.
+
+    :param ligand_smiles: SMILES string representing the ligand.
+    :param csv: Optional path to save the output as a CSV file.
+    :return: None
+    """
+    ligand = Ligand(ligand_smiles)
+    if csv:
+        try:
+            export_ligand_info(ligand, csv)
+            print(f"Ligand info saved to {csv}")
+        except Exception as e:
+            print(f"Failed to write CSV: {e}")
+    else:
+        print(ligand)
+
+@cli.command(name="pocket_info")
+@click.argument("structure_file", type=click.Path(exists=True))
+@click.argument("predictions_file", type=click.Path(exists=True))
+@click.argument("residues_file", type=click.Path(exists=True))
+@click.option("--pocket_id", help="Show specific pocket.")
+@click.option("--csv", type=click.Path(), help="Save all pockets to CSV.")
+def pocket_info(structure_file, predictions_file, residues_file, pocket_id, csv):
+    """
+    Shows SASA, GRAVY, and charge for predicted pockets in a protein.
+
+    :param structure_file: Path to the structure file (.pdb or .pdbqt).
+    :param predictions_file: Path to the pocket predictions file (from p2rank).
+    :param residues_file: Path to the pocket-to-residues mapping file.
+    :param pocket_id: Optional ID of a specific pocket to display.
+    :param csv: Optional path to save pocket info as a CSV file.
+    :return: None
+    """
+    pockets = Pockets(structure_file, predictions_file, residues_file)
+
+    if pocket_id:
+        if pocket_id not in pockets.pocket_sasas:
+            print(f"Pocket '{pocket_id}' not found.")
+        else:
+            print(pockets.format_pocket_row(pocket_id))
+    else:
+        for pid in sorted(pockets.pocket_sasas.keys()):
+            print(pockets.format_pocket_row(pid))
+
+    if csv:
+        try:
+            export_pocket_info(pockets, csv)
+            print(f"Pocket info saved to {csv}")
+        except Exception as e:
+            print(f"Failed to write CSV: {e}")
+
+@cli.command(name="poses_info")
+@click.argument("ligand_smiles", type=click.STRING)
+@click.argument("pdb_code", type=click.STRING)
+@click.argument("vina_file", type=click.Path(exists=True))
+@click.argument("structure_file", type=click.Path(exists=True))
+@click.argument("predictions_file", type=click.Path(exists=True))
+@click.argument("residues_file", type=click.Path(exists=True))
+@click.option("--pose_index", type=int, help="Index of the pose to show (1-based).")
+@click.option("--csv", type=click.Path(), help="Save all poses to CSV.")
+@click.option("--res", is_flag=True, help="Show only residue names involved in H-bonds.")
+@click.option("--csv_hbonds", type=click.Path(), help="Save hydrogen bond residues per pose to CSV.")
+def poses_info(ligand_smiles, pdb_code, vina_file, structure_file, predictions_file, residues_file, pose_index, csv, res, csv_hbonds):
+    """
+    Shows ligand–pocket interaction summary per docking pose.
+
+    :param ligand_smiles: SMILES string of the ligand.
+    :param pdb_code: PDB code of the protein.
+    :param vina_file: Path to the AutoDock Vina output file (.pdbqt).
+    :param structure_file: Path to the protein structure file (.pdb or .pdbqt).
+    :param predictions_file: Path to the pocket predictions file.
+    :param residues_file: Path to the pocket-to-residues mapping file.
+    :param pose_index: Optional index of a specific pose to display (1-based).
+    :param csv: Optional path to save poses info as a CSV file.
+    :param res: If provided only residue names from H-bonds are shown.
+    :param csv_hbonds: Optional path to save hydrogen bond residues per pose are saved to a CSV.
+    :return: None
+    """
+    ligand = Ligand(ligand_smiles)
+    pockets = Pockets(structure_file, predictions_file, residues_file)
+    poses = Poses(ligand, pockets, pdb_code, vina_file, predictions_file)
+
+    header = f"{'Pose':<6} {'Pocket':<10} {'HBonds':<8} {'GRAVY/LogP':<15} {'SASA(P/L/R)':<25} {'Charge(P/L)':<15}"
+
+    if pose_index:
+        index = pose_index - 1
+        if not (0 <= index < poses.number_of_models):
+            print("Invalid pose index.")
+            return
+        print(header)
+        print("-" * len(header))
+        print(poses.format_pose_row(index))
+    else:
+        print(poses)
+
+    if csv:
+        try:
+            export_poses_info(poses, csv)
+            print(f"Poses info saved to {csv}")
+        except Exception as e:
+            print(f"Failed to write CSV: {e}")
+    
+    if res:
+        print("\nHydrogen-bonding residues per pose:\n")
+        for i, hbonds_res in enumerate(poses.model_hbonds):
+            pose_label = f"Pose {i+1:>2}"
+            if not hbonds_res:
+                print(f"{pose_label}: — No hydrogen bonds —")
+            else:
+                formatted_res = [
+                    res if isinstance(res, str) else f"{res[1]}-{res[0]}{res[2]}"
+                    for res in hbonds_res
+                ]
+                print(f"{pose_label}: {', '.join(formatted_res)}")
+        print()
+        return
+    
+    if csv_hbonds:
+        try:
+            export_hbond_residues(poses, csv_hbonds)
+            print(f"Hydrogen bond residue data saved to {csv_hbonds}")
+        except Exception as e:
+            print(f"Failed to write CSV: {e}")
+
+
 if __name__ == "__main__":
-    launch_shell()
+    cli() 
