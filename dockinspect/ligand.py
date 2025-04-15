@@ -50,13 +50,3 @@ class Ligand:
             f"{'Volume (Å³):':<12} {self.volume:.2f}\n"
             f"{'Charge:':<12} {self.charge:+d}"
         )
-
-if __name__=="__main__":
-    #smiles = "C1CCCCC1" 
-    #smiles = "C1CCC(O)CC1" 
-    #smiles = "NC(=O)N"
-    #smiles="[NH4+]" 
-    smiles="CC(=O)[O-]"
-    
-    ligand = Ligand(smiles)
-    print(ligand)

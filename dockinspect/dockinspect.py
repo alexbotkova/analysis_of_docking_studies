@@ -36,15 +36,16 @@ class Session:
     Represents the state of a docking analysis session.
 
     :param smiles: SMILES string for the ligand.
-    :param vina_file: Path to the out_vina file from AutoDock Vina.
     :param pdb_code: Protein structure PDB code.
-    :param predictions_file: Path to the file containing predicted pockets from p2rank (optional).
-    :param residues_file: Path to the file mapping pockets to residues from p2rank (optional).
+    :param vina_file: Path to the out_vina file from AutoDock Vina.
+    :param structure_file: Path to the structure file from AutoDock Vina.
+    :param predictions_file: Path to the file containing predicted pockets (optional).
+    :param residues_file: Path to the file mapping pockets to residues (optional).
     """
-    def __init__(self, smiles=None, vina_file=None, pdb_code=None, structure_file=None, predictions_file=None, residues_file=None):
+    def __init__(self, smiles=None, pdb_code=None, vina_file=None, structure_file=None, predictions_file=None, residues_file=None):
         self.ligand = Ligand(smiles) if smiles else None
-        self.out_vina_file = vina_file
         self.pdb_code = pdb_code
+        self.out_vina_file = vina_file
         self.structure_file = structure_file
         self.predictions_file = predictions_file
         self.residues_file = residues_file
@@ -89,6 +90,11 @@ visualize(
         subprocess.run(["pymol", script_path], cwd=project_root, env=env, stdout=subprocess.DEVNULL)
     except Exception as e:
         print(f"Error running PyMOL: {e}")
+    finally:
+        try:
+            os.remove(script_path)
+        except OSError as cleanup_error:
+            print(f"Error removing temporary script: {cleanup_error}")
 
 
 class Shell(shell_cmd.Cmd):
@@ -157,7 +163,7 @@ class Shell(shell_cmd.Cmd):
             return
 
         if self.session.structure_file and self.session.out_vina_file:
-            print(f"Launching PyMOL with mode '{mode or 'default'}'...")
+            print(f"Launching PyMOL with mode '{mode or 'hbonds'}'...")
             pocket_selection = ""
 
             if self.session.poses:
@@ -335,8 +341,8 @@ def launch_shell(ligand_smiles, pdb_code, vina_file, structure_file, predictions
     Initializes a docking analysis session and launches the interactive shell.
 
     :param ligand_smiles: SMILES string of the ligand.
-    :param vina_file: Output file from AutoDock Vina.
     :param pdb_code: Protein structure PDB code.
+    :param vina_file: Output file from AutoDock Vina.
     :param predictions_file: Pocket prediction file (optional).
     :param residues_file: Residue annotation file (optional).
     :return: None

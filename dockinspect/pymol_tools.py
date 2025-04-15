@@ -48,18 +48,3 @@ def get_pocket_atomids_dict(pocket_data_df):
         atom_selection = f"id {joined_ids}"
         pocket_atomid_dict[pocket_name] = atom_selection
     return pocket_atomid_dict
-
-if __name__ == "__main__":
-    predictions_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/prankweb-2SRC/structure.cif_predictions.csv"
-    df = get_df(predictions_filepath)
-    res_dict = get_pocket_residues_dict(df)
-    #print(res_dict)
-    plus_counts = {}
-
-    for key, value in res_dict.items():
-        plus_counts[key] = value.count('+')
-
-    #print(plus_counts)
-
-    id_dict = get_pocket_atomids_dict(df)
-    print(id_dict)

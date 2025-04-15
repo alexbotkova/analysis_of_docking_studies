@@ -136,15 +136,3 @@ class Pockets:
         for pid in pocket_ids:
             lines.append(self.format_pocket_row(pid))
         return "\n".join(lines)
-
-
-if __name__ == "__main__":
-    """
-    Example usage block for computing pocket descriptors from docking results.
-    """
-    structure_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/result-2025-03-30T21_20_58.783Z/structure.pdbqt"
-    predictions_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/prankweb-2SRC/structure.cif_predictions.csv"
-    residues_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/prankweb-2SRC/structure.cif_residues.csv"
-
-    pockets = Pockets(structure_filepath, predictions_filepath, residues_filepath)
-    print(pockets)

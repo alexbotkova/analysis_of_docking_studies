@@ -8,9 +8,6 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dockinspect')))
 from my_parser import get_df, parse_predictions, parse_residues
 
-predictions_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/prankweb-2SRC/structure.cif_predictions.csv"
-residues_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/prankweb-2SRC/structure.cif_residues.csv"
-
 MOCK_PREDICTIONS = StringIO("""name,residue_ids
 pocket1,A_123 A_124 A_125
 pocket2,B_200 B_201
@@ -23,30 +20,6 @@ A,125,ASP
 B,200,HIS
 B,201,LYS
 """)
-
-def test_get_df():
-    df = get_df(predictions_filepath)
-    assert isinstance(df, pd.DataFrame)
-    assert not df.empty
-    assert "name" in df.columns
-    assert "residue_ids" in df.columns
-
-def test_parse_predictions():
-    pocket_dict = parse_predictions(predictions_filepath)
-    assert isinstance(pocket_dict, dict)
-    assert len(pocket_dict) > 0
-    for key, val in pocket_dict.items():
-        assert isinstance(key, str)
-        assert isinstance(val, list)
-        assert all(isinstance(r, str) for r in val)
-
-def test_parse_residues():
-    residue_dict = parse_residues(residues_filepath)
-    assert isinstance(residue_dict, dict)
-    assert len(residue_dict) > 0
-    for key, val in residue_dict.items():
-        assert "_" in key  
-        assert isinstance(val, str)
 
 def test_parse_predictions_manual(tmp_path):
     mock_path = tmp_path / "mock_preds.csv"

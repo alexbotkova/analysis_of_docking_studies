@@ -12,6 +12,7 @@ Functions:
 Requires PyMOL, structure and Vina output files, and optionally a pocket selection string.
 """
 
+import os
 from pymol import cmd 
 from my_parser import *
 from pymol_tools import *
@@ -127,32 +128,16 @@ def visualize(pdb_code, vina_file, pose_num=1, pocket_selection = "",  mode="", 
                                 angle=strict_angle_cutoff, 
                                 state1=1, state2=pose_num)
 
-#TODO možná se na too vykašlat
-        filtered_hbonds = []
-        for (m1, i1), (m2, i2) in hbonds:
-            try:
-                obj1 = cmd.get_object_list(m1)[0]
-                obj2 = cmd.get_object_list(m2)[0]
-                distance = cmd.get_distance(f"{m1} and index {i1}", f"{m2} and index {i2}")
-            except:
-                continue
-
-            if obj1 != obj2 and {"structure", "out_vina"} == {obj1, obj2} and min_distance_cutoff <= distance <= max_distance_cutoff:
-                filtered_hbonds.append(((m1, i1), (m2, i2)))
-
         for idx, ((m1, i1), (m2, i2)) in enumerate(hbonds):
             cmd.distance(f"hb_{idx}", f"{m1} and index {i1}", f"{m2} and index {i2}")
             cmd.select(f"hb_res_{idx}_1", f"byres ({m1} and index {i1})")
             cmd.select(f"hb_res_{idx}_2", f"byres ({m2} and index {i2})")
             cmd.show("sticks", f"hb_res_{idx}_1 or hb_res_{idx}_2")
 
-            # Label only residues from the protein structure
             if m1 == "structure":
                 cmd.label(f"{m1} and index {i1}", '"%s" % (resn)')
             if m2 == "structure":
                 cmd.label(f"{m2} and index {i2}", '"%s" % (resn)')
-
-
 
     if color_mode == "broad":
         __color_regions("hydrophobic", "ALA+VAL+LEU+ILE+MET+PHE+TRP+PRO+GLY", "yellow")
@@ -162,17 +147,11 @@ def visualize(pdb_code, vina_file, pose_num=1, pocket_selection = "",  mode="", 
         __color_regions("acidic", "ASP+GLU", "red")
         __color_regions("basic", "LYS+ARG+HIS", "blue")
         __color_regions("neutral", "SER+THR+ASN+GLN+TYR+CYS", "white")
-
-
-if __name__=="__main__":
-    predictions_filepath = "test_files/cyclohexane/prankweb-2SRC/structure.pdb_predictions.csv"
-    structure_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/result-2025-03-30T21_20_58.783Z/structure.pdbqt"
-    out_vina_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/result-2025-03-30T21_20_58.783Z/out_vina.pdbqt"
-
-    visualize(structure_filepath, out_vina_filepath, mode="surface", pose_num=4)
-    #visualize(structure_filepath, out_vina_filepath, mode="polar")
-    #visualize(structure_filepath, out_vina_filepath, mode="charge")
-    #visualize(structure_filepath, out_vina_filepath, mode="hbonds")
-    #pocket_data_df = get_df(predictions_filepath)
-    #pocket_residues_dict = get_pocket_residues_dict(pocket_data_df)
-    #print(pocket_residues_dict)
+    
+    if pdb_code.endswith(".pdb") is False and pdb_code.endswith(".pdbqt") is False:
+        fetched_filename = f"{pdb_code}.pdb"
+        if os.path.exists(fetched_filename):
+            try:
+                os.remove(fetched_filename)
+            except Exception as e:
+                print(f"Warning: could not remove {fetched_filename}: {e}")

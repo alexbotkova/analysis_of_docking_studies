@@ -10,7 +10,6 @@ Classes:
     Poses: Evaluates pose-pocket interactions and formats pose-specific properties.
 """
 
-import pymol
 from pymol import cmd
 from my_parser import *
 from pockets import Pockets
