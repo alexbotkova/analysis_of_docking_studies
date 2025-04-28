@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="analysis_of_docking_studies",             
+    name="dockinspect",             
     version="1.0.0",                      
     author="Alexandra Botkova",
     author_email="botkova@natur.cuni.cz",
@@ -18,10 +18,15 @@ setup(
         "rdkit>=2024.3.5",
     ],
     python_requires='>=3.8',
-
     extras_require={
     "viz": [
-        "pymol>=3.0.0", # PyMOL is not available via pip; install it via conda: conda install pymol-open-source
+        "pymol>=3.0.0", # conda install -c conda-forge pymol-open-source
+
     ],
-    }
+    },
+    entry_points={
+        'console_scripts': [
+            'dockinspect = dockinspect.main:main',
+        ],
+    },
 )

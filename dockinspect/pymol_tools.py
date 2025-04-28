@@ -4,13 +4,12 @@ into PyMOL-friendly selection strings.
 
 Functions:
     get_pocket_residues_dict: Converts residue IDs into selection strings by pocket.
-    get_pocket_atomids_dict: Converts atom IDs into selection strings by pocket.
 """
 
 import re
-from my_parser import *
+from pandas import DataFrame
 
-def get_pocket_residues_dict(pocket_data_df):
+def get_pocket_residues_dict(pocket_data_df: DataFrame) -> dict:
     """
     Generates a dictionary where keys are pocket names and values are residues joined in one string 
     formatted for the pymol selection command.
@@ -30,21 +29,3 @@ def get_pocket_residues_dict(pocket_data_df):
             residues_selection = f"chain {chain_letter} and resi {joined_residues}"
             pocket_residues_dict[pocket_name] = residues_selection
     return pocket_residues_dict
-
-def get_pocket_atomids_dict(pocket_data_df):
-    """
-    Generates a dictionary where keys are pocket names and values are atom ID selections
-    formatted for the PyMOL selection command.
-
-    :param pocket_data_df: A dataframe generated from a CSV file containing PDB predictions.
-    :return: A dictionary where keys are pocket names and values are atom ID selection strings for PyMOL.
-    """
-    pocket_atomid_dict = {}
-    for _, row in pocket_data_df.iterrows():
-        pocket_name = row['name'].strip()
-        atom_ids_str = str(row['surf_atom_ids'])
-        atom_ids = re.findall(r'\d+', atom_ids_str)
-        joined_ids = '+'.join(atom_ids)
-        atom_selection = f"id {joined_ids}"
-        pocket_atomid_dict[pocket_name] = atom_selection
-    return pocket_atomid_dict

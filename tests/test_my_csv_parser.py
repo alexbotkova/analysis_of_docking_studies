@@ -6,7 +6,7 @@ from io import StringIO
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../dockinspect')))
-from my_parser import get_df, parse_predictions, parse_residues
+from my_csv_parser import get_df, parse_predictions, parse_residues
 
 MOCK_PREDICTIONS = StringIO("""name,residue_ids
 pocket1,A_123 A_124 A_125

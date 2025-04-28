@@ -7,87 +7,38 @@ This script uses PyMOL to:
 - Combine ligand and pocket descriptors (SASA, GRAVY, charge) for pose-level analysis.
 
 Classes:
-    Poses: Evaluates pose-pocket interactions and formats pose-specific properties.
+    Poses: Evaluates ligand-pocket interactions and formats pose-specific properties.
 """
 
-from pymol import cmd
-from my_parser import *
-from pockets import Pockets
-from ligand import Ligand
 import re
 import numpy as np
-from my_parser import *
+from pandas import DataFrame
+from dockinspect.ligand import Ligand
+from dockinspect.pockets import Pockets
+from dockinspect.my_csv_parser import get_df
+from dockinspect.hbonds import get_hydrogen_bonds_and_residues
 
 class Poses:
     """
-    Represents a collection of ligand poses and analyzes their interaction with protein pockets.
+    Represents a collection of docking poses and analyzes their interaction with protein pockets.
 
-    Attributes:
-        ligand (Ligand): Ligand object containing molecular descriptors.
-        pockets (Pockets): Pockets object with pocket-level SASA, GRAVY, and charge info.
+        ligand (Ligand): Ligand object.
+        pockets (Pockets): Pockets object.
         model_hbonds (list): List of hydrogen bond pairs per model.
         model_pockets (list): List of closest pockets assigned to each model.
         number_of_models (int): Total number of docking poses (models).
     """
-
     @staticmethod
-    def get_hydrogen_bonds(pdb_code, out_vina_filepath):
-        """
-        Calculates the number of hydrogen bonds between protein and ligand for each pose,
-        filtering out intra-ligand bonds.
-
-        :param pdb_code: PDB code for the structure to fetch from RCSB.
-        :param out_vina_filepath: Path to the Vina docking output file (PDBQT).
-        :return: A list of hydrogen bond pairs (tuples of atom indices) for each pose.
-        """
-        import pymol
-        from pymol import cmd
-
-        pymol.finish_launching(['pymol', '-qc'])
-
-        cmd.fetch(pdb_code, name="structure", type="pdb")
-        cmd.load(out_vina_filepath, "out_vina")
-        cmd.h_add()
-
-        max_distance_cutoff = 3.2
-        strict_angle_cutoff = 25.0
-
-        model_hbonds = []
-        n_states = cmd.count_states("out_vina")
-
-        for state in range(1, n_states + 1):
-            sel1 = 'structure and (donor or acceptor)'
-            sel2 = 'out_vina and (donor or acceptor)'
-            
-            hbonds = cmd.find_pairs(sel1, sel2, mode=1,
-                                cutoff=max_distance_cutoff,
-                                angle=strict_angle_cutoff,   
-                                state1=1, state2=state)
-            
-            hbonds_res = []
-            for (m1, i1), (m2, i2) in hbonds:
-                if m1 == "structure":
-                    res_info1 = cmd.get_model(f"{m1} and index {i1}").atom[0]
-                    hbonds_res.append(res_info1.resn)
-                if m2 == "structure":
-                    res_info2 = cmd.get_model(f"{m2} and index {i2}").atom[0]
-                    hbonds_res.append(res_info2.resn)
-            model_hbonds.append(hbonds_res)
-
-        cmd.quit()
-        return model_hbonds
-
-    @staticmethod
-    def get_models_avg_coordinates(out_vina_filepath):
+    def get_models_avg_coordinates(vina_file: str) -> list:
         """
         Computes the average coordinates of ligand atoms for each docking pose.
 
-        :param out_vina_filepath: Path to a Vina output PDBQT file.
+        :param vina_file: Path to a Vina output PDBQT file.
         :return: List of average (x, y, z) coordinates for each pose.
         """
         models_avg_coordinates = []
         current_coordinates = []
-        with open(out_vina_filepath, 'r') as file:
+        with open(vina_file, 'r') as file:
             for line in file:
                 if line.startswith("MODEL"):
                     if current_coordinates:
@@ -103,7 +54,7 @@ class Poses:
         return models_avg_coordinates
 
     @staticmethod
-    def get_model_pocket_helper(pocket_data_df, models_avg_coordinates):
+    def get_model_pocket_helper(pocket_data_df: DataFrame, models_avg_coordinates: list) -> list:
         """
         Assigns the closest pocket to each ligand pose based on spatial proximity.
 
@@ -131,36 +82,41 @@ class Poses:
         return model_pocket
 
     @staticmethod
-    def get_model_pocket(predictions_filepath, out_vina_filepath):
+    def get_model_pocket(predictions_file: str, vina_file: str) -> list:
         """
         Wrapper for assigning closest pockets to each pose based on coordinates.
 
         :param predictions_filepath: Path to CSV with pocket centers.
-        :param out_vina_filepath: Path to docking output (PDBQT).
+        :param out_vina_filepath: Path to Autodock Vina PDBQT output file.
         :return: List of closest pockets per pose.
         """
-        pocket_data_df = get_df(predictions_filepath)
-        models_avg_coordinates = Poses.get_models_avg_coordinates(out_vina_filepath)
+        pocket_data_df = get_df(predictions_file)
+        models_avg_coordinates = Poses.get_models_avg_coordinates(vina_file)
         return Poses.get_model_pocket_helper(pocket_data_df, models_avg_coordinates)
 
-    def __init__(self, ligand, pockets, pdb_code, out_vina_filepath, predictions_filepath):
+    def __init__(self, ligand: Ligand, pockets: Pockets, pdb_code: str, vina_file: str, predictions_file: str, distance:float, angle:float, model_hbonds_res:list = None):
         """
-        Initializes a Poses object by associating each ligand pose with a pocket and computing HBonds.
+        Initializes a Poses object by associating each ligand pose with a pocket and computing H-bonds.
 
         :param ligand: Ligand object.
         :param pockets: Pockets object.
-        :param structure_filepath: Path to structure file used in docking.
-        :param out_vina_filepath: Path to Vina docking output file.
-        :param predictions_filepath: Path to CSV with pocket predictions.
+        :param pdb_code: PDB code of the target protein.
+        :param vina_file: Path to PDBQT AutoDock Vina output file.
+        :param predictions_file: Path to CSV file with pocket predictions.
+        :param distance: Distance cutoff for H-bond detection.
+        :param angle: Angle cutoff for H-bond detection.
+        :úaram model_hbonds_res: Precomputed list of residues participating in H-bonds.
         """
         self.ligand = ligand
         self.pockets = pockets
-
-        self.model_hbonds = Poses.get_hydrogen_bonds(pdb_code, out_vina_filepath)
-        self.model_pockets = Poses.get_model_pocket(predictions_filepath, out_vina_filepath)
+        if model_hbonds_res is None:
+            self.model_hbonds_res = get_hydrogen_bonds_and_residues(pdb_code, vina_file, distance, angle)[1]
+        else:
+            self.model_hbonds_res = model_hbonds_res
+        self.model_pockets = Poses.get_model_pocket(predictions_file, vina_file)
         self.number_of_models = len(self.model_pockets)
 
-    def format_pose_row(self, i):
+    def format_pose_row(self, i: int) -> str:
         """
         Formats a single row of pose-pair analysis data.
 
@@ -168,7 +124,7 @@ class Poses:
         :return: Formatted string of pose properties and interactions.
         """
         pocket = self.model_pockets[i]
-        hbonds_count = len(self.model_hbonds[i])
+        hbonds_count = len(self.model_hbonds_res[i])
         gravy = self.pockets.pocket_gravys.get(pocket, 0)
         sasa_pocket = self.pockets.pocket_sasas.get(pocket, 0)
         sasa_ligand = self.ligand.sasa
@@ -183,7 +139,7 @@ class Poses:
             f"{f'{charge_pocket}/{charge_ligand}':<15}"
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Returns a formatted string table summarizing ligand–pocket interaction properties for each pose.
 
@@ -195,18 +151,3 @@ class Poses:
         for i in range(self.number_of_models):
             lines.append(self.format_pose_row(i))
         return "\n".join(lines)
-
-if __name__ == "__main__":
-    """
-    Example usage to analyze docking poses and pocket interactions using a SMILES string and prediction files.
-    """
-    smiles = "NC(N)=O"
-    structure_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/result-2025-03-30T21_20_58.783Z/structure.pdbqt"
-    out_vina_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/result-2025-03-30T21_20_58.783Z/out_vina.pdbqt"
-    predictions_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/prankweb-2SRC/structure.cif_predictions.csv"
-    residues_filepath = "/Users/alexbotkova/analysis_of_docking_studies/test_files/urea/prankweb-2SRC/structure.cif_residues.csv"
-
-    ligand = Ligand(smiles)
-    pockets = Pockets(structure_filepath, predictions_filepath, residues_filepath)
-    o = Poses(ligand, pockets, structure_filepath, out_vina_filepath, predictions_filepath)
-    print(o)
